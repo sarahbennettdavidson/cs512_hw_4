@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>UNM CS 412/512 HW3</title>
+  <style>
+    body {
+      background: #111;
+      color: #ccc;
+      font-family: monospace;
+    }
+
+    textarea {
+      background: #222;
+      color: #0f0;
+      font: 14px monospace;
+      width: 400px;
+      height: 250px;
+    }
+
+    canvas {
+      border: 1px solid #444;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Interactive Controls & Geometric Primitives</h2>
+  <p>Edit vertex and fragment shaders on the left to get the result instantly.<br>
+  Use mouse to drag and rotate the cube. <br>
+Use arrow keys and w, s keys to move the camera.<br>
+Save your code to source file if you want to save it.<br>
+Press F12 to see the console for debugging.</p>
+
+  <div style="display: flex; gap: 10px; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div>
+        <b>Vertex Shader</b><br>
+        <textarea id="vertEditor"></textarea>
+      </div>
+      <div>
+        <b>Fragment Shader</b><br>
+        <textarea id="fragEditor"></textarea>
+      </div>
+    </div>
+    <div>
+      <canvas id="glcanvas" width="400" height="400"></canvas>
+
+      <div style="max-height: 150px; overflow-y: auto; width: 400px;">
+      <div style="display: flex; gap: 20px;">
+        <div>
+          <label>Rotate X <input type="range" id="xRotSlider" min="-5" max="5" step="0.1" value="0"></label><br>
+          <label>Rotate Y <input type="range" id="YRotSlider" min="-5" max="5" step="0.1" value="0"></label><br>
+          <label>Rotate Z <input type="range" id="zRotSlider" min="-5" max="5" step="0.1" value="0"></label><br>
+          <label>Shear X <input type="range" id="xShearSlider" min="0" max="1" step="0.1" value="0"></label><br>
+          <label>Shear Y <input type="range" id="yShearSlider" min="0" max="1" step="0.1" value="0"></label><br>
+          <label>Shear Z <input type="range" id="zShearSlider" min="0" max="1" step="0.1" value="0"></label>
+        </div>
+          <label>Distance <input type="range" id="distSlider" min="-3" max="3" step="0.01" value="1.0"></label>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <button id="shapeBtn">Cube</button>
+          <button id="patternBtn">Checks</button>
+          <button id="projBtn">Orthographic</button>
+        </div>
+      </div>
+
+       <label>patternSize <input type="range" id="patternSizeSlider" min="2" max="20" step="0.1" value="4"></label><br>
+      <label>blur <input type="range" id="blurSlider" min="0.001" max="0.333" step="0.001" value="0"></label><br>
+      <label>Angle <input type="range" id="angleSlider" min="0.00" max="6.283185" step="0.001" value="0"></label>
+      <div>
+        https://iquilezles.org/articles/palettes/<br>
+
+        <label>t <input type="range" id="paletteTSlider" min="0" max="1" step="0.01" value="0.5"></label>
+      </div>
+      <div id="paletteSliders" style="display: flex; gap: 10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vertex shader -->
+  <script id="vertex-shader" type="x-shader/x-vertex">#version 300 es
+in vec3 aPosition;
+in vec3 aColor;
+in vec2 aUV;      
+
+
+uniform float uTime; //time in sec
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+uniform mat4 uModelTransformationMatrix;
+
+out vec3 vColor;
+out vec3 vPos;
+out vec2 vUV;
+
+
+void main() {
+  gl_Position = uProjectionMatrix * uModelViewMatrix * uModelTransformationMatrix * vec4(aPosition,1.0);
+  vColor = aColor;
+  vPos = aPosition;//pass the pos to the frag shader to do color placements
+  vUV=aUV;
+}
+</script>
+  <!-- Fragment Shader -->
+  <script id="fragment-shader" type="x-shader/x-fragment">#version 300 es
+precision mediump float;
+in vec3 vColor;
+in vec3 vPos;//to get color placements from vertex shader
+in vec2 vUV;
+
+uniform int patternNum;
+uniform vec3 paletteParams[4];
+uniform float paletteT;
+uniform float patternSize;
+uniform float blur;
+uniform float patternRot;
+
+out vec4 fragColor;
+
+//https://iquilezles.org/articles/palettes/
+// cosine based palette, 4 vec3 params
+vec3 palette( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d )
+{
+    return a + b*cos( 6.283185*(c*t+d) );
+}
+vec2 rotate2D(vec2 posit, float ang){
+    posit -= 0.5;
+    posit =  mat2(cos(ang),-sin(ang),
+                sin(ang),cos(ang)) * posit;
+    posit += 0.5;
+    return posit;
+}
+ vec2 brickTile(vec2 p){
+    // Here is where the offset is happening
+    p.x += step(1., mod(p.y,2.0)) * 0.5;
+    return fract(p);
+}
+void main() {
+  vec2 uv = vUV;
+  float ang = patternRot;   // 45 degrees
+  uv -= 0.5;
+  uv = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * uv;
+  uv += 0.5;
+  vec2 p = uv * patternSize;
+  float tx = abs(fract((p.x - 0.5) * 0.5) * 2.0 - 1.0);
+  float ty = abs(fract((p.y - 0.5) * 0.5) * 2.0 - 1.0);
+  float ox = 1.0 - smoothstep(0.5 - blur, 0.5 + blur, tx);
+  float oy = 1.0 - smoothstep(0.5 - blur, 0.5 + blur, ty);
+  float checks = ox + oy - 2.0 * ox * oy;
+  float stripes = 1.0 - smoothstep(0.5 - blur, 0.5 + blur, ty);
+  float dots    = 1.0 - smoothstep(0.33-blur, 0.33+blur, length(brickTile(p) - 0.5));
+
+  float value;
+  switch (patternNum) {
+    case 0:  value = checks;  break;
+    case 1:  value = stripes; break;
+    case 2:  value = dots;    break;
+    default: value = 1.0;     break;
+}  
+vec3 fc = palette(value*paletteT, paletteParams[0],paletteParams[1],paletteParams[2],paletteParams[3]);// swap in stripes or dots and use palette
+fragColor = vec4(fc, 1.0);   
+//fragColor = vec4(vUV, 0.0, 1.0);//uv test
+}
+</script>
+
+  <script src="primitives.js"></script>
+  <script src="transformations.js"></script>
+  <script src="skeletonKinematics.js"></script>
+  <script src="htrParserR.js"></script>
+  <script src="htrParserL.js"></script> 
+
+  <script>
+    function createShader(gl, type, source) {
+      let shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        throw new Error(gl.getShaderInfoLog(shader));
+      }
+      return shader;
+    }
+
+    function createProgram(gl, vsSource, fsSource) {
+      let vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
+      let fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+      let prog = gl.createProgram();
+      gl.attachShader(prog, vs);
+      gl.attachShader(prog, fs);
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+        throw new Error(gl.getProgramInfoLog(prog));
+      }
+      return prog;
+    }
+
+    // Load file via .then...this is in the htrParserR.js file
+    loadAndParseHTRR('rightHandData.htr').then(parsedResult => {
+        handData = parsedResult;
+        if (handData) {
+            currentFrame = 1;
+            isPlaying = true;
+        }
+    });
+
+    // Function to draw all joints for the active frame of hand animation
+    function animateHand(globalMatrix) {
+      if (!handData || !handData.frames) return;
+
+      // current active frame
+      const activeFrame = handData.frames[currentFrame];
+
+      // If frame exists, do the hierarchy 
+      if (activeFrame) {
+          // computeSkeletonMatrices generates an array of 4x4 matrices representing the bones
+          const worldMatrices = computeSkeletonMatrices(handData.rootNode, activeFrame, globalMatrix);
+
+          // Draw each bone from a cube from the cubeBuffer
+          for (let i = 0; i < worldMatrices.length; i++) {
+              drawShape(cubeBuffers, worldMatrices[i]);
+          }
+      }
+
+      //frame countert if playing
+      if (isPlaying) {
+          const totalFrames = handData.frames.length - 1;
+          if (currentFrame < totalFrames) {
+              currentFrame++;
+          } else {
+              isPlaying = false;
+          }
+      }
+  }
+
+    // WebGL setup
+    const canvas = document.getElementById("glcanvas");
+    const gl = canvas.getContext("webgl2");
+    if (!gl) alert("WebGL2 not supported");
+
+    let vertEditor = document.getElementById("vertEditor");
+    let fragEditor = document.getElementById("fragEditor");
+    vertEditor.value = document.getElementById("vertex-shader").textContent;
+    fragEditor.value = document.getElementById("fragment-shader").textContent;
+
+    let program, posLoc, colorLoc, timeLoc, uMVM, uPM, uMTM, uvLoc;
+    let vbo, nbo, ibo, uvbo;
+
+    let shapeCounter = 0;
+    const shapeNames = ["Cube", "Pyramid", "Sphere"];
+    let shape = shapeNames[0];
+    let shapeIndexCount = 0;
+    let handData = null;      // the hand skeleton data from the parsed htr file
+    let currentFrame = 1;     
+    let isPlaying = false;  
+    let patternCounter = 0;
+    const patternNames = ["Checks", "Stripes", "Dots"];
+    let patternID = patternCounter%patternNames.length;
+    let shapeID = shapeCounter%shapeNames.length;
+    let pattern = patternNames[0];
+    let a1 = Math.random();
+    let a2 = Math.random();
+    let a3 = Math.random();
+    
+
+
+    // Buffers
+    function initBuffers() {
+      let pos, col, idx, uv;
+      if (shape === "Cube") {
+        pos = cubePos; col = cubeColors; idx = cubeIndices; uv = cubeUVs;
+      } else if (shape === "Pyramid") {
+        pos = pyramidPos; col = pyramidColors; idx = pyramidIndices; uv = pyramidUVs;
+      } else {
+        pos = spherePos; col = sphereColors; idx = sphereIndices; uv = sphereUVs;
+      }
+      indexCount = idx.length;
+
+      vbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      gl.bufferData(gl.ARRAY_BUFFER, pos, gl.STATIC_DRAW);
+
+      nbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, nbo);
+      gl.bufferData(gl.ARRAY_BUFFER, col, gl.STATIC_DRAW);
+
+      uvbo = gl.createBuffer();//
+      gl.bindBuffer(gl.ARRAY_BUFFER, uvbo);
+      gl.bufferData(gl.ARRAY_BUFFER, uv, gl.STATIC_DRAW);
+
+      ibo = gl.createBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+    }
+
+    initBuffers();
+     // buffers for every shape, made once
+    function makeShapeBuffers(pos, col, uv, idx) {
+      const b = {};
+
+      b.vbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.vbo);
+      gl.bufferData(gl.ARRAY_BUFFER, pos, gl.STATIC_DRAW);
+
+      b.nbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.nbo);
+      gl.bufferData(gl.ARRAY_BUFFER, col, gl.STATIC_DRAW);
+
+      b.uvbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.uvbo);
+      gl.bufferData(gl.ARRAY_BUFFER, uv, gl.STATIC_DRAW);
+
+      b.ibo = gl.createBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, b.ibo);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+
+      b.count = idx.length;
+      return b;
+    }
+
+    const cubeBuffers    = makeShapeBuffers(cubePos, cubeColors, cubeUVs, cubeIndices);
+    const pyramidBuffers = makeShapeBuffers(pyramidPos, pyramidColors, pyramidUVs, pyramidIndices);
+    const sphereBuffers  = makeShapeBuffers(spherePos, sphereColors, sphereUVs, sphereIndices);
+
+    // draw one shape with one model matrix
+    function drawShape(b, matrix) {
+      gl.uniformMatrix4fv(uMTM, false, matrix);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.vbo);
+      gl.enableVertexAttribArray(posLoc);
+      gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.nbo);
+      gl.enableVertexAttribArray(colorLoc);
+      gl.vertexAttribPointer(colorLoc, 3, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.uvbo);
+      gl.enableVertexAttribArray(uvLoc);
+      gl.vertexAttribPointer(uvLoc, 2, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, b.ibo);
+      gl.drawElements(gl.TRIANGLES, b.count, gl.UNSIGNED_SHORT, 0);
+    }
+
+    function initShaderProgram() {
+      try {
+        program = createProgram(gl, vertEditor.value, fragEditor.value);
+        gl.useProgram(program);
+        posLoc = gl.getAttribLocation(program, "aPosition");
+        colorLoc = gl.getAttribLocation(program, "aColor");
+        uvLoc = gl.getAttribLocation(program, "aUV");
+        timeLoc = gl.getUniformLocation(program, "uTime");
+        uMVM = gl.getUniformLocation(program, "uModelViewMatrix");
+        uPM = gl.getUniformLocation(program, "uProjectionMatrix");
+        uMTM = gl.getUniformLocation(program, "uModelTransformationMatrix");
+        //patternNum = gl.getUniformLocation(program, "patternNum");
+
+      } catch (e) { console.error(e); }
+    }
+    initShaderProgram();
+    vertEditor.onkeyup = initShaderProgram;
+    fragEditor.onkeyup = initShaderProgram;
+
+    // Mouse and keyboard interactions
+    let mouseDown = false, lastX, lastY, cubeRotX = 0, cubeRotY = 0, cubeRotZ = 0;
+    let camX = 0, camY = 0, camZ = -6;
+
+    canvas.addEventListener('mousedown', e => { mouseDown = true; lastX = e.clientX; lastY = e.clientY; });
+    canvas.addEventListener('mouseup', () => mouseDown = false);
+    canvas.addEventListener('mousemove', e => {
+      if (!mouseDown) return;
+      let dx = e.clientX - lastX;
+      let dy = e.clientY - lastY;
+      cubeRotY += dx * 0.01;
+      cubeRotX += dy * 0.01;
+      lastX = e.clientX; lastY = e.clientY;
+    });
+
+    document.addEventListener('keydown', e => {
+      const step = 0.2;
+      switch (e.key) {
+        case 'ArrowUp': camY -= step; break;
+        case 'ArrowDown': camY += step; break;
+        case 'ArrowLeft': camX += step; break;
+        case 'ArrowRight': camX -= step; break;
+        case 'w': camZ += step; break;
+        case 's': camZ -= step; break;
+      }
+    });
+
+    const yRotSlider = document.getElementById("YRotSlider");
+    const xRotSlider = document.getElementById("xRotSlider");
+    const zRotSlider = document.getElementById("zRotSlider");
+
+    const xShearSlider = document.getElementById("xShearSlider");
+    let xShear = parseFloat(xShearSlider.value);
+    xShearSlider.addEventListener("input", () => { xShear = parseFloat(xShearSlider.value); });
+
+    const yShearSlider = document.getElementById("yShearSlider");
+    let yShear = parseFloat(yShearSlider.value);
+    yShearSlider.addEventListener("input", () => { yShear = parseFloat(yShearSlider.value); });
+
+    const zShearSlider = document.getElementById("zShearSlider");
+    let zShear = parseFloat(zShearSlider.value);
+    zShearSlider.addEventListener("input", () => { zShear = parseFloat(zShearSlider.value); });    
+    
+    const distSlider = document.getElementById("distSlider");
+    let dist = parseFloat(distSlider.value);
+    distSlider.addEventListener("input", () => { dist = parseFloat(distSlider.value); });
+
+    const cubeDir    = [ 1.0, 0.0,  0.0  ];
+    const pyramidDir = [-0.5, 0.0,  0.866];
+    const sphereDir  = [-0.5, 0.0, -0.866];
+
+//put palette values here
+
+    const paletteValues = new Float32Array([0.5, 0.5, 0.5,   0.5, 0.5, 0.5,   1, 1, 1,   0, 0.33, 0.67]);
+    const paletteDiv = document.getElementById("paletteSliders");
+    const paletteGroups = ["a", "b", "c", "d"];
+    const paletteChannels = ["r", "g", "b"];
+
+    for (let g = 0; g < 4; g++) {
+      const block = document.createElement("div");
+      block.textContent = paletteGroups[g];
+
+      for (let c = 0; c < 3; c++) {
+        const i = g * 3 + c;   // position in paletteValues
+
+        const label = document.createElement("label");
+        label.textContent = paletteChannels[c] + " ";
+
+        const s = document.createElement("input");
+        s.type = "range"; s.min = 0; s.max = 2; s.step = 0.01; s.value = paletteValues[i];
+        s.style.width = "70px";
+        s.addEventListener("input", () => { paletteValues[i] = parseFloat(s.value); });
+
+        label.appendChild(s);
+        block.appendChild(document.createElement("br"));
+        block.appendChild(label);
+      }
+
+      paletteDiv.appendChild(block);
+    }
+        const paletteTSlider = document.getElementById("paletteTSlider");
+        let paletteT = parseFloat(paletteTSlider.value);
+        paletteTSlider.addEventListener("input", () => { paletteT = parseFloat(paletteTSlider.value); });
+
+        const patternSizeSlider = document.getElementById("patternSizeSlider");
+        let patternSize = parseFloat(patternSizeSlider.value);
+        patternSizeSlider.addEventListener("input", () => { patternSize = parseFloat(patternSizeSlider.value); });
+
+        const blurSlider = document.getElementById("blurSlider");
+        let blur = parseFloat(blurSlider.value);
+        blurSlider.addEventListener("input", () => { blur = parseFloat(blurSlider.value); });
+
+        const angleSlider = document.getElementById("angleSlider");
+        let patternRot = parseFloat(angleSlider.value);
+        angleSlider.addEventListener("input", () => { patternRot = parseFloat(angleSlider.value); });
+
+
+        // Projection setup
+        let fov = Math.PI / 4, aspect = canvas.width / canvas.height, zNear = 0.1, zFar = 100;
+
+        let orthoSize = 2.5;
+
+        // Perspective and Orthographic projection
+        let projPerspective = perspective(fov, aspect, zNear, zFar);
+
+        let projOrtho = matMul(
+        box2Cube(-orthoSize * aspect, orthoSize * aspect, -orthoSize, orthoSize, zNear, zFar),
+        flipZ()
+    );
+    let proj = projOrtho;
+    
+    //behavior to toggle projection types
+    const projBtn = document.getElementById("projBtn");
+    projBtn.addEventListener("click", () => {
+      if (proj === projOrtho) {
+        proj = projPerspective;
+        projBtn.textContent = "Perspective";
+      } else {
+        proj = projOrtho;
+         projBtn.textContent = "Orthographic";
+      }
+});
+
+    const shapeBtn = document.getElementById("shapeBtn");
+    shapeBtn.addEventListener("click", () => {
+      shapeCounter++;
+      shapeID = shapeCounter % shapeNames.length
+      shape = shapeNames[shapeID];
+      shapeBtn.textContent = shape;
+});
+
+const patternBtn = document.getElementById("patternBtn");
+    patternBtn.addEventListener("click", () => {
+      patternCounter++;
+      patternID = patternCounter % patternNames.length
+      pattern = patternNames[patternID];
+      patternBtn.textContent = pattern;
+});
+
+    let startTime = Date.now();
+
+    function render() {
+      gl.enable(gl.DEPTH_TEST);
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      cubeRotY += parseFloat(yRotSlider.value) * 0.01;
+      cubeRotX += parseFloat(xRotSlider.value) * 0.01;
+      cubeRotZ += parseFloat(zRotSlider.value) * 0.01;
+
+
+      // rotation matrices
+      let cx = Math.cos(cubeRotY), sx = Math.sin(cubeRotY);
+      let cy = Math.cos(cubeRotX), sy = Math.sin(cubeRotX);
+      let cz = Math.cos(cubeRotZ), sz = Math.sin(cubeRotZ);
+
+      let rotX = [1, 0, 0, 0, 0, cy, sy, 0, 0, -sy, cy, 0, 0, 0, 0, 1];
+      let rotY = [cx, 0, -sx, 0, 0, 1, 0, 0, sx, 0, cx, 0, 0, 0, 0, 1];
+      let rotZ = [cz, sz, 0, 0, -sz, cz, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+      let cubeRotation = multiplyMat4(multiplyMat4(rotY, rotX), rotZ);
+
+      // init model-view matrix as identity matrix
+      let modelViewMatrix = mat4Identity();
+      // init model transformation matrix as identity matrix
+      let modelTransformationMatrix = mat4Identity();
+
+      //delta time in ms
+      let deltaTime = Date.now() - startTime;
+      // object rotation
+      modelTransformationMatrix = multiplyMat4(modelTransformationMatrix, cubeRotation);
+       //shearing
+      let amt = Math.abs(Math.sin(deltaTime / 1000));
+      let xShearAmt = xShear * amt;
+      let yShearAmt = yShear * amt;
+      let zShearAmt = zShear * amt;
+
+      modelTransformationMatrix = mat4ShearX(modelTransformationMatrix, xShearAmt);
+      modelTransformationMatrix = mat4ShearY(modelTransformationMatrix, yShearAmt);
+      modelTransformationMatrix = mat4ShearZ(modelTransformationMatrix, zShearAmt);
+      // camera translation
+      modelViewMatrix = mat4Translate(modelViewMatrix, [camX, camY, camZ]);
+      
+      //set time in seconds
+      gl.uniform1f(timeLoc, deltaTime/1000.0);
+      gl.uniformMatrix4fv(uPM, false, proj);
+      gl.uniformMatrix4fv(uMVM, false, modelViewMatrix);
+
+      //making some variables for the shader color parameters
+      gl.uniform1i(gl.getUniformLocation(program, "patternNum"), patternID);
+      gl.uniform3fv(gl.getUniformLocation(program, "paletteParams"), paletteValues);
+      gl.uniform1f(gl.getUniformLocation(program, "paletteT"), paletteT);
+      gl.uniform1f(gl.getUniformLocation(program, "patternSize"), patternSize);
+      gl.uniform1f(gl.getUniformLocation(program, "blur"), blur);
+      gl.uniform1f(gl.getUniformLocation(program, "patternRot"), patternRot);
+
+      // SCALE DOWN THE HAND SKELETON
+      // HTR raw bone lengths are large (~10 to 200 units), so we scale it down to fit your scene
+      let handGlobalScale = 0.02;
+      let handBaseMatrix = mat4Scale(modelTransformationMatrix, [handGlobalScale, handGlobalScale, handGlobalScale]);
+
+      // ANIMATE THE HAND!
+      animateHand(handBaseMatrix);
+
+
+      //main shape
+      let mainBuffers;
+      if (shape === "Cube") mainBuffers = cubeBuffers;
+      else if (shape === "Pyramid") mainBuffers = pyramidBuffers;
+      else mainBuffers = sphereBuffers;
+
+            // orbiters: one of each shape, circling the main shape
+      let orbitAngle = deltaTime / 1000;
+      let orbitBase = mat4RotateY(cubeRotation, orbitAngle);
+
+      drawShape(cubeBuffers,    mat4Scale(mat4Translate(orbitBase, [cubeDir[0] * dist,    cubeDir[1] * dist,    cubeDir[2] * dist]),    [0.4, 0.4, 0.4]));
+      drawShape(pyramidBuffers, mat4Scale(mat4Translate(orbitBase, [pyramidDir[0] * dist, pyramidDir[1] * dist, pyramidDir[2] * dist]), [0.4, 0.4, 0.4]));
+      drawShape(sphereBuffers,  mat4Scale(mat4Translate(orbitBase, [sphereDir[0] * dist,  sphereDir[1] * dist,  sphereDir[2] * dist]),  [0.4, 0.4, 0.4]));
+
+      drawShape(mainBuffers, modelTransformationMatrix);
+    }
+
+    // Initialize when page loads
+    window.onload = function () {
+      setInterval(render, 30);//this 60fps data will be slow motion at 30fps but its ok with me
+    }
+
+  </script>
+</body>
+
+</html>
