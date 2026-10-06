@@ -216,7 +216,8 @@ fragColor = vec4(fc, 1.0);
           const worldMatrices = computeSkeletonMatrices(handData.rootNode, activeFrame);
           // Draw each bone from a cube from the cubeBuffer
           for (let i = 0; i < worldMatrices.length; i++) {
-              drawShape(cubeBuffers, worldMatrices[i]);
+              let finalBoneMatrix = multiplyMat4(globalMatrix, worldMatrices[i]);
+              drawShape(cubeBuffers, finalBoneMatrix);
           }
       }
 
