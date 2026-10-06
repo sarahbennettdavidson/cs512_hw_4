@@ -561,8 +561,7 @@ const patternBtn = document.getElementById("patternBtn");
       let handGlobalScale = 0.02;
       let handBaseMatrix = mat4Scale(modelTransformationMatrix, [handGlobalScale, handGlobalScale, handGlobalScale]);
 
-      // ANIMATE THE HAND!
-      animateHand(handBaseMatrix);
+      
 
 
       //main shape
@@ -575,11 +574,14 @@ const patternBtn = document.getElementById("patternBtn");
       let orbitAngle = deltaTime / 1000;
       let orbitBase = mat4RotateY(cubeRotation, orbitAngle);
 
-      drawShape(cubeBuffers,    mat4Scale(mat4Translate(orbitBase, [cubeDir[0] * dist,    cubeDir[1] * dist,    cubeDir[2] * dist]),    [0.4, 0.4, 0.4]));
-      drawShape(pyramidBuffers, mat4Scale(mat4Translate(orbitBase, [pyramidDir[0] * dist, pyramidDir[1] * dist, pyramidDir[2] * dist]), [0.4, 0.4, 0.4]));
-      drawShape(sphereBuffers,  mat4Scale(mat4Translate(orbitBase, [sphereDir[0] * dist,  sphereDir[1] * dist,  sphereDir[2] * dist]),  [0.4, 0.4, 0.4]));
+      //drawShape(cubeBuffers,    mat4Scale(mat4Translate(orbitBase, [cubeDir[0] * dist,    cubeDir[1] * dist,    cubeDir[2] * dist]),    [0.4, 0.4, 0.4]));
+      //drawShape(pyramidBuffers, mat4Scale(mat4Translate(orbitBase, [pyramidDir[0] * dist, pyramidDir[1] * dist, pyramidDir[2] * dist]), [0.4, 0.4, 0.4]));
+      //drawShape(sphereBuffers,  mat4Scale(mat4Translate(orbitBase, [sphereDir[0] * dist,  sphereDir[1] * dist,  sphereDir[2] * dist]),  [0.4, 0.4, 0.4]));
 
-      drawShape(mainBuffers, modelTransformationMatrix);
+      //drawShape(mainBuffers, modelTransformationMatrix);
+
+      // ANIMATE THE HAND!
+      animateHand(handBaseMatrix);
     }
 
     // Initialize when page loads
