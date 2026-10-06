@@ -213,8 +213,7 @@ fragColor = vec4(fc, 1.0);
       // If frame exists, do the hierarchy 
       if (activeFrame) {
           // computeSkeletonMatrices generates an array of 4x4 matrices representing the bones
-          const worldMatrices = computeSkeletonMatrices(handData.rootNode, activeFrame, globalMatrix);
-
+          const worldMatrices = computeSkeletonMatrices(handData.rootNode, activeFrame);
           // Draw each bone from a cube from the cubeBuffer
           for (let i = 0; i < worldMatrices.length; i++) {
               drawShape(cubeBuffers, worldMatrices[i]);
