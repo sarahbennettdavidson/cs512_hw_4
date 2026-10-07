@@ -211,6 +211,7 @@ fragColor = vec4(fc, 1.0);
 
     // Function to draw all joints for the active frame of hand animation
     function animateHand(globalMatrix) {
+      console.log("Hand!!!);
       if (!handData || !handData.frames) return;
 
       // current active frame
@@ -584,7 +585,7 @@ const patternBtn = document.getElementById("patternBtn");
       //drawShape(pyramidBuffers, mat4Scale(mat4Translate(orbitBase, [pyramidDir[0] * dist, pyramidDir[1] * dist, pyramidDir[2] * dist]), [0.4, 0.4, 0.4]));
       //drawShape(sphereBuffers,  mat4Scale(mat4Translate(orbitBase, [sphereDir[0] * dist,  sphereDir[1] * dist,  sphereDir[2] * dist]),  [0.4, 0.4, 0.4]));
 
-      drawShape(mainBuffers, modelTransformationMatrix);
+     // drawShape(mainBuffers, modelTransformationMatrix);
 
       // ANIMATE THE HAND!
       animateHand(handBaseMatrix);
