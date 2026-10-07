@@ -196,10 +196,17 @@ fragColor = vec4(fc, 1.0);
 
     // Load file via .then...this is in the htrParserR.js file
     loadAndParseHTRR('loops1_all_right.htr').then(parsedResult => {
+        console.log("--- HTR PARSE RESULT ---", parsedResult); // 1. Check full result
         handData = parsedResult;
         if (handData) {
+            console.log("Root Node:", handData.rootNode);     // 2. Check root node hierarchy
+            console.log("Frames Array:", handData.frames);    // 3. Check parsed frames
+            console.log("Total Frames Count:", handData.frames ? handData.frames.length : 0);
             currentFrame = 1;
             isPlaying = true;
+        } else {
+        console.error("handData is null! File failed to fetch or parse.");
+    }
         }
     });
 
