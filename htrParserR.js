@@ -82,7 +82,7 @@ function parseHTRDataR(text) {
                 frameDataList[frameIdx][jointName] = {
                     Tx: parseFloat(chars[1]), Ty: parseFloat(chars[2]), Tz: parseFloat(chars[3]),
                     Rx: parseFloat(chars[4]), Ry: parseFloat(chars[5]), Rz: parseFloat(chars[6]),
-                    Length: basePositions[jointName] ? basePositions[jointName].Length : 1.0
+                    SF: chars.length >= 8 ? parseFloat(chars[7]) : 1.0
                 };
             }
         }
