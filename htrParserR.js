@@ -5,7 +5,7 @@
 /**
  * Fetches and parses Right Hand HTR motion data.
  * @param {string} filePath - Path to right hand HTR file (e.g., 'handDataR.htr')
- * @returns {Promise<Object>} Parsed skeleton tree, base positions, and frame data.
+ * @returns {Promise<Object>} Parsed header, skeleton tree, base positions, and frame data.
  */
 async function loadAndParseHTRR(filePath) {
     try {
@@ -25,7 +25,8 @@ async function loadAndParseHTRR(filePath) {
 function parseHTRDataR(text) {
     const lines = text.split(/\r?\n/);
     let section = "";
-    
+
+    let header = {};
     let basePositions = {};
     let jointParents = {};
     let jointChildren = {};
@@ -40,8 +41,13 @@ function parseHTRDataR(text) {
             continue;
         }
 
-        // 1. Topology ([SegmentNames&Hierarchy])
-        if (section === "[Header]" || section === "[SegmentNames&Hierarchy]") {
+        // 1. Header: key/value settings (FileType, NumFrames, EulerRotationOrder, ...)
+        if (section === "[Header]") {
+            const chars = line.split(/\s+/);
+            header[chars[0]] = chars.slice(1).join(" ");
+        }
+        // 2. Topology: "child parent" pairs only
+        else if (section === "[SegmentNames&Hierarchy]") {
             const chars = line.split(/\s+/);
             if (chars.length >= 2) {
                 const child = chars[0];
@@ -51,9 +57,9 @@ function parseHTRDataR(text) {
                 if (!jointChildren[child]) jointChildren[child] = [];
                 jointChildren[parent].push(child);
             }
-        } 
-        // 2. Base Positions
-        else if (section.includes("BasePosition")) {
+        }
+        // 3. Base Positions
+        else if (section === "[BasePosition]") {
             const chars = line.split(/\s+/);
             if (chars.length >= 8) {
                 const name = chars[0];
@@ -64,11 +70,11 @@ function parseHTRDataR(text) {
                 };
             }
         }
-        // 3. Motion Frames
-        else if (section.startsWith("[") && section !== "[Header]") {
+        // 4. Motion Frames: one section per joint, e.g. [RWrist]
+        else if (section !== "[EndOfFile]") {
             const jointName = section.replace("[", "").replace("]", "").trim();
             const chars = line.split(/\s+/);
-            
+
             if (chars.length >= 7 && !isNaN(parseInt(chars[0]))) {
                 const frameIdx = parseInt(chars[0]);
                 if (!frameDataList[frameIdx]) frameDataList[frameIdx] = {};
@@ -82,16 +88,10 @@ function parseHTRDataR(text) {
         }
     }
 
-    // Find Root Node (e.g., RWrist -> GLOBAL)
-    let rootName = null;
-    const allNodes = Object.keys(jointChildren);
-    for (let i = 0; i < allNodes.length; i++) {
-        const node = allNodes[i];
-        if (!jointParents[node] || jointParents[node] === "GLOBAL" || jointParents[node] === "NULL") {
-            rootName = node;
-            break;
-        }
-    }
+    // Root is the joint attached directly to GLOBAL (e.g., RWrist -> GLOBAL)
+    const rootName = Object.keys(jointParents).find(
+        n => jointParents[n] === "GLOBAL" || jointParents[n] === "NULL"
+    ) || null;
 
     function buildTree(name) {
         return {
@@ -101,6 +101,7 @@ function parseHTRDataR(text) {
     }
 
     return {
+        header: header,
         rootNode: rootName ? buildTree(rootName) : null,
         frames: frameDataList,
         basePositions: basePositions
