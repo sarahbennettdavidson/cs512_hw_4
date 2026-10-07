@@ -43,29 +43,23 @@ function stackMultiply(stack, localMatrix) {
 
 /**
  * Computes a joint's local transformation matrix: T * Rz * Ry * Rx
+ * (HTR EulerRotationOrder ZYX). Angles are in degrees.
+ * mat4Translate / mat4RotateZ / mat4RotateY / mat4RotateX each
+ * post-multiply (M -> M * T, M -> M * Rz, ...), so chaining them in
+ * this order builds T * Rz * Ry * Rx directly.
  */
 function createBoneLocalMatrix(tx, ty, tz, rx, ry, rz) {
     const degToRad = Math.PI / 180;
-    
-    // 1. Identity matrix
+
     let m = mat4Identity();
-    
-    // 2. Local translation FIRST
     m = mat4Translate(m, [tx, ty, tz]);
-    
-    // 3. Rotation chain for HTR standard (X -> Y -> Z or Z -> Y -> X depending on file header)
-    // Try standard X * Y * Z multiplication chain:
-    const rxMat = mat4RotateX(mat4Identity(), rx * degToRad);
-    const ryMat = mat4RotateY(mat4Identity(), ry * degToRad);
-    const rzMat = mat4RotateZ(mat4Identity(), rz * degToRad);
-    
-    // Combine rotations: R = Rx * Ry * Rz
-    let rotMat = mat4Multiply(rxMat, ryMat);
-    rotMat = mat4Multiply(rotMat, rzMat);
-    
-    // Apply rotation to translation
-    return mat4Multiply(m, rotMat);
+    m = mat4RotateZ(m, rz * degToRad);
+    m = mat4RotateY(m, ry * degToRad);
+    m = mat4RotateX(m, rx * degToRad);
+
+    return m;
 }
+
 /**
  * Performs Forward Kinematics via DFS stack traversal.
  * Calculates world transformation matrices for all bones in the active frame
