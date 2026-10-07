@@ -521,13 +521,8 @@ const patternBtn = document.getElementById("patternBtn");
       let deltaTime = Date.now() - startTime;
       // object rotation
       modelTransformationMatrix = multiplyMat4(modelTransformationMatrix, cubeRotation);
-       //shearing
       let amt = Math.abs(Math.sin(deltaTime / 1000));
       
-
-      modelTransformationMatrix = mat4ShearX(modelTransformationMatrix, xShearAmt);
-      modelTransformationMatrix = mat4ShearY(modelTransformationMatrix, yShearAmt);
-      modelTransformationMatrix = mat4ShearZ(modelTransformationMatrix, zShearAmt);
       // camera translation
       modelViewMatrix = mat4Translate(modelViewMatrix, [camX, camY, camZ]);
       
