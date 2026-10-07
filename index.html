@@ -224,7 +224,7 @@ fragColor = vec4(fc, 1.0);
 
     for (let i = 0; i < worldMatrices.length; i++) {
       if (worldMatrices[i]) {
-        let finalBoneMatrix = multiplyMat4(globalMatrix, worldMatrices[i]);
+        let finalBoneMatrix = multiplyMat4(globalMatrix, worldMatrices[i].matrix);        
         drawShape(cubeBuffers, finalBoneMatrix);
       }
     }
