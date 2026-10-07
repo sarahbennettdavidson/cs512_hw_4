@@ -211,34 +211,36 @@ fragColor = vec4(fc, 1.0);
 
     // Function to draw all joints for the active frame of hand animation
     function animateHand(globalMatrix) {
-      if (!handData || !handData.frames) return;
+  if (!handData || !handData.frames || !handData.rootNode) return;
 
-      // current active frame
-      const activeFrame = handData.frames[currentFrame];
+  // Make sure we don't grab an undefined frame (like index 0)
+  const activeFrame = handData.frames[currentFrame];
+  if (!activeFrame) return;
 
-      // If frame exists, do the hierarchy 
-      if (activeFrame) {
-          console.log("ActiveHand!!!");
+  try {
+    const worldMatrices = computeSkeletonMatrices(handData.rootNode, activeFrame);
+    if (!worldMatrices) return;
 
-          // computeSkeletonMatrices generates an array of 4x4 matrices representing the bones
-          const worldMatrices = computeSkeletonMatrices(handData.rootNode, activeFrame);
-          // Draw each bone from a cube from the cubeBuffer
-          for (let i = 0; i < worldMatrices.length; i++) {
-              let finalBoneMatrix = multiplyMat4(globalMatrix, worldMatrices[i]);
-              drawShape(cubeBuffers, finalBoneMatrix);
-          }
+    for (let i = 0; i < worldMatrices.length; i++) {
+      if (worldMatrices[i]) {
+        let finalBoneMatrix = multiplyMat4(globalMatrix, worldMatrices[i]);
+        drawShape(cubeBuffers, finalBoneMatrix);
       }
-
-      //frame countert if playing
-      if (isPlaying) {
-          const totalFrames = handData.frames.length - 1;
-          if (currentFrame < totalFrames) {
-              currentFrame++;
-          } else {
-              isPlaying = false;
-          }
-      }
+    }
+  } catch (e) {
+    console.error("Error computing skeleton frame:", e);
+    return;
   }
+
+  if (isPlaying) {
+    // Array length is 10041, valid frame indices are 1 through 10040
+    if (currentFrame < handData.frames.length - 1) {
+      currentFrame++;
+    } else {
+      currentFrame = 1; // Reset to frame 1 to loop
+    }
+  }
+}
 
     // WebGL setup
     const canvas = document.getElementById("glcanvas");
