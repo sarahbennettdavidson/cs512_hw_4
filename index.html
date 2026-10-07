@@ -219,7 +219,7 @@ fragColor = vec4(fc, 1.0);
   if (!activeFrame) return;
 
   try {
-    const worldMatrices = computeSkeletonMatrices(handData.rootNode, activeFrame);
+    const worldMatrices = computeSkeletonMatrices(handData.rootNode, activeFrame, handData.basePositions);
     if (!worldMatrices) return;
 
     for (let i = 0; i < worldMatrices.length; i++) {
