@@ -568,7 +568,7 @@ const patternBtn = document.getElementById("patternBtn");
 
       // SCALE DOWN THE HAND SKELETON
       // HTR raw bone lengths are large (~10 to 200 units), so we scale it down to fit your scene
-      let handGlobalScale = 0.0002;
+      let handGlobalScale = 1.0;
       let handBaseMatrix = mat4Scale(modelTransformationMatrix, [handGlobalScale, handGlobalScale, handGlobalScale]);
 
       
