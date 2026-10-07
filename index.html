@@ -397,22 +397,6 @@ fragColor = vec4(fc, 1.0);
     const xRotSlider = document.getElementById("xRotSlider");
     const zRotSlider = document.getElementById("zRotSlider");
 
-    const xShearSlider = document.getElementById("xShearSlider");
-    let xShear = parseFloat(xShearSlider.value);
-    xShearSlider.addEventListener("input", () => { xShear = parseFloat(xShearSlider.value); });
-
-    const yShearSlider = document.getElementById("yShearSlider");
-    let yShear = parseFloat(yShearSlider.value);
-    yShearSlider.addEventListener("input", () => { yShear = parseFloat(yShearSlider.value); });
-
-    const zShearSlider = document.getElementById("zShearSlider");
-    let zShear = parseFloat(zShearSlider.value);
-    zShearSlider.addEventListener("input", () => { zShear = parseFloat(zShearSlider.value); });    
-    
-    const distSlider = document.getElementById("distSlider");
-    let dist = parseFloat(distSlider.value);
-    distSlider.addEventListener("input", () => { dist = parseFloat(distSlider.value); });
-
     const cubeDir    = [ 1.0, 0.0,  0.0  ];
     const pyramidDir = [-0.5, 0.0,  0.866];
     const sphereDir  = [-0.5, 0.0, -0.866];
@@ -539,9 +523,7 @@ const patternBtn = document.getElementById("patternBtn");
       modelTransformationMatrix = multiplyMat4(modelTransformationMatrix, cubeRotation);
        //shearing
       let amt = Math.abs(Math.sin(deltaTime / 1000));
-      let xShearAmt = xShear * amt;
-      let yShearAmt = yShear * amt;
-      let zShearAmt = zShear * amt;
+      
 
       modelTransformationMatrix = mat4ShearX(modelTransformationMatrix, xShearAmt);
       modelTransformationMatrix = mat4ShearY(modelTransformationMatrix, yShearAmt);
