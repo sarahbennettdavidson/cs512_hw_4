@@ -331,6 +331,7 @@ fragColor = vec4(fc, 1.0);
     const cubeBuffers    = makeShapeBuffers(cubePos, cubeColors, cubeUVs, cubeIndices);
     const pyramidBuffers = makeShapeBuffers(pyramidPos, pyramidColors, pyramidUVs, pyramidIndices);
     const sphereBuffers  = makeShapeBuffers(spherePos, sphereColors, sphereUVs, sphereIndices);
+    const boneBuffers = makeShapeBuffers(unitCubePos, cubeColors, cubeUVs, cubeIndices);
 
     // draw one shape with one model matrix
     function drawShape(b, matrix) {
