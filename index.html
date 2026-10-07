@@ -204,6 +204,7 @@ fragColor = vec4(fc, 1.0);
             console.log("Total Frames Count:", handData.frames ? handData.frames.length : 0);
             currentFrame = 1;
             isPlaying = true;
+            console.log("Root translation:", handData.frames[1][handData.rootNode.name]);
         } else {
             console.error("handData is null! File failed to fetch or parse.");
         }
