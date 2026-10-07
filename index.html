@@ -211,7 +211,6 @@ fragColor = vec4(fc, 1.0);
 
     // Function to draw all joints for the active frame of hand animation
     function animateHand(globalMatrix) {
-      console.log("Hand!!!");
       if (!handData || !handData.frames) return;
 
       // current active frame
@@ -219,6 +218,8 @@ fragColor = vec4(fc, 1.0);
 
       // If frame exists, do the hierarchy 
       if (activeFrame) {
+          console.log("ActiveHand!!!");
+
           // computeSkeletonMatrices generates an array of 4x4 matrices representing the bones
           const worldMatrices = computeSkeletonMatrices(handData.rootNode, activeFrame);
           // Draw each bone from a cube from the cubeBuffer
