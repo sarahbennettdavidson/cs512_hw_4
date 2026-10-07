@@ -189,52 +189,47 @@ fragColor = vec4(fc, 1.0);
       return prog;
     }
 
-    // Load file via .then...this is in the htrParserR.js file
-    loadAndParseHTRR('loops1_all_right.htr').then(parsedResult => {
-        console.log("--- HTR PARSE RESULT ---", parsedResult); // 1. Check full result
-        handData = parsedResult;
-        if (handData) {
-            console.log("Root Node:", handData.rootNode);     // 2. Check root node hierarchy
-            console.log("Frames Array:", handData.frames);    // 3. Check parsed frames
-            console.log("Total Frames Count:", handData.frames ? handData.frames.length : 0);
-            currentFrame = 1;
-            isPlaying = true;
-            console.log("Root translation:", handData.frames[1][handData.rootNode.name]);
-        } else {
-            console.error("handData is null! File failed to fetch or parse.");
-        }
-    });
+  // Load both hands; same capture, so they share frame numbers
+Promise.all([
+    loadAndParseHTRR('loops1_all_right.htr'),
+    loadAndParseHTRL('loops1_all_left.htr')
+]).then(([right, left]) => {
+    handDataR = right;
+    handDataL = left;
+    if (!handDataR) console.error("Right hand failed to load.");
+    if (!handDataL) console.error("Left hand failed to load.");
+    currentFrame = 1;
+    isPlaying = true;
+});
 
-    // Function to draw all joints for the active frame of hand animation
-    function animateHand(globalMatrix) {
-  if (!handData || !handData.frames || !handData.rootNode) return;
-
-  // Make sure we don't grab an undefined frame (like index 0)
-  const activeFrame = handData.frames[currentFrame];
+// Draw one hand's skeleton for the current frame
+function drawHand(data, globalMatrix) {
+  if (!data || !data.frames || !data.rootNode) return;
+  const activeFrame = data.frames[currentFrame];
   if (!activeFrame) return;
 
-  try {
-    const worldMatrices = computeSkeletonMatrices(handData.rootNode, activeFrame, handData.basePositions);
-    if (!worldMatrices) return;
-
-    for (let i = 0; i < worldMatrices.length; i++) {
-      if (worldMatrices[i]) {
-        let finalBoneMatrix = multiplyMat4(globalMatrix, worldMatrices[i].matrix);        
-        drawShape(boneBuffers, finalBoneMatrix);      }
-    }
-  } catch (e) {
-    console.error("Error computing skeleton frame:", e);
-    return;
+  const worldMatrices = computeSkeletonMatrices(data.rootNode, activeFrame, data.basePositions);
+  for (let i = 0; i < worldMatrices.length; i++) {
+    drawShape(boneBuffers, multiplyMat4(globalMatrix, worldMatrices[i].matrix));
   }
+}
 
-  if (isPlaying) {
-    // Array length is 10041, valid frame indices are 1 through 10040
-    if (currentFrame < handData.frames.length - 1) {
-      currentFrame++;
-    } else {
-      currentFrame = 1; // Reset to frame 1 to loop
-    }
-  }
+// Step both hands forward one frame, looping at the shorter file's end
+function advanceFrame() {
+  if (!isPlaying) return;
+  const lengths = [handDataR, handDataL]
+    .filter(d => d && d.frames)
+    .map(d => d.frames.length - 1);
+  if (lengths.length === 0) return;
+  const lastFrame = Math.min(...lengths);
+  currentFrame = currentFrame < lastFrame ? currentFrame + 1 : 1;
+}
+
+// Wrist position in capture space (mm) at frame 1
+function wristPos(data) {
+  const rn = data.rootNode.name;
+  const r = data.frames[1][rn], b = data.basePositions[rn];
+  return [r.Tx + b.Tx, r.Ty + b.Ty, r.Tz + b.Tz];
 }
 
     // WebGL setup
@@ -254,7 +249,7 @@ fragColor = vec4(fc, 1.0);
     const shapeNames = ["Cube", "Pyramid", "Sphere"];
     let shape = shapeNames[0];
     let shapeIndexCount = 0;
-    let handData = null;      // the hand skeleton data from the parsed htr file
+    let handDataR = null, handDataL = null;   // the hand skeleton data from the parsed htr file
     let currentFrame = 1;     
     let isPlaying = false;  
     let patternCounter = 0;
@@ -539,40 +534,25 @@ const patternBtn = document.getElementById("patternBtn");
       gl.uniform1f(gl.getUniformLocation(program, "blur"), blur);
       gl.uniform1f(gl.getUniformLocation(program, "patternRot"), patternRot);
 
-      // SCALE DOWN THE HAND SKELETON
-      // HTR raw bone lengths are large (~10 to 200 units), so we scale it down to fit your scene
-     let handGlobalScale = 0.01;
-     let handBaseMatrix = mat4Scale(modelTransformationMatrix, [handGlobalScale, handGlobalScale, handGlobalScale]);
+      let handGlobalScale = 0.01;   // lower this if both hands don't fit in view
+      let handBaseMatrix = mat4Scale(modelTransformationMatrix, [handGlobalScale, handGlobalScale, handGlobalScale]);
       
-    // center the hand on the wrist's frame-1 position so it sits at the origin
-    if (handData && handData.rootNode && handData.frames[1]) {
-      const rn = handData.rootNode.name;
-      const r  = handData.frames[1][rn];
-      const rb = handData.basePositions[rn];
-      handBaseMatrix = mat4Translate(handBaseMatrix, [-(r.Tx + rb.Tx), -(r.Ty + rb.Ty), -(r.Tz + rb.Tz)]);
-    }
+      // center the view between the two wrists at frame 1
+      const loaded = [handDataR, handDataL].filter(d => d && d.rootNode && d.frames[1]);
+      if (loaded.length > 0) {
+        const c = [0, 0, 0];
+        for (const d of loaded) {
+          const p = wristPos(d);
+          c[0] += p[0]; c[1] += p[1]; c[2] += p[2];
+        }
+        const n = loaded.length;
+        handBaseMatrix = mat4Translate(handBaseMatrix, [-c[0] / n, -c[1] / n, -c[2] / n]);
+      }
       
-
-
-      //main shape
-      //let mainBuffers;
-      //if (shape === "Cube") mainBuffers = cubeBuffers;
-      //else if (shape === "Pyramid") mainBuffers = pyramidBuffers;
-      //else mainBuffers = sphereBuffers;
-
-            // orbiters: one of each shape, circling the main shape
-      //let orbitAngle = deltaTime / 1000;
-      //let orbitBase = mat4RotateY(cubeRotation, orbitAngle);
-
-      //drawShape(cubeBuffers,    mat4Scale(mat4Translate(orbitBase, [cubeDir[0] * dist,    cubeDir[1] * dist,    cubeDir[2] * dist]),    [0.4, 0.4, 0.4]));
-      //drawShape(pyramidBuffers, mat4Scale(mat4Translate(orbitBase, [pyramidDir[0] * dist, pyramidDir[1] * dist, pyramidDir[2] * dist]), [0.4, 0.4, 0.4]));
-      //drawShape(sphereBuffers,  mat4Scale(mat4Translate(orbitBase, [sphereDir[0] * dist,  sphereDir[1] * dist,  sphereDir[2] * dist]),  [0.4, 0.4, 0.4]));
-
-     // drawShape(mainBuffers, modelTransformationMatrix);
-
-      // ANIMATE THE HAND!
-      animateHand(handBaseMatrix);
-    }
+      drawHand(handDataR, handBaseMatrix);
+      drawHand(handDataL, handBaseMatrix);
+      advanceFrame();
+      }
 
     // Initialize when page loads
     window.onload = function () {
