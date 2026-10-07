@@ -54,10 +54,11 @@ Press F12 to see the console for debugging.</p>
           <label>Rotate Y <input type="range" id="YRotSlider" min="-5" max="5" step="0.1" value="0"></label><br>
           <label>Rotate Z <input type="range" id="zRotSlider" min="-5" max="5" step="0.1" value="0"></label><br>
         <div style="display: flex; flex-direction: column; gap: 5px;">
-          <button id="shapeBtn">Cube</button>
+          <button id="playBtn">Stop</button>
           <button id="patternBtn">Checks</button>
           <button id="projBtn">Orthographic</button>
         </div>
+          <label>Speed <input type="range" id="speedSlider" min="0.1" max="4" step="0.1" value="1"></label> <span id="speedLabel">1.0x</span>
       </div>
 
        <label>patternSize <input type="range" id="patternSizeSlider" min="1" max="10" step="0.1" value="4"></label><br>
@@ -199,7 +200,7 @@ Promise.all([
     if (!handDataR) console.error("Right hand failed to load.");
     if (!handDataL) console.error("Left hand failed to load.");
     currentFrame = 1;
-    isPlaying = true;
+    framePos = 1;
 });
 
 // Draw one hand's skeleton for the current frame
@@ -222,7 +223,9 @@ function advanceFrame() {
     .map(d => d.frames.length - 1);
   if (lengths.length === 0) return;
   const lastFrame = Math.min(...lengths);
-  currentFrame = currentFrame < lastFrame ? currentFrame + 1 : 1;
+  framePos += speed;
+  if (framePos >= lastFrame + 1) framePos = 1;
+  currentFrame = Math.floor(framePos);
 }
 
 // Wrist position in capture space (mm) at frame 1
@@ -251,7 +254,8 @@ function wristPos(data) {
     let shapeIndexCount = 0;
     let handDataR = null, handDataL = null;   // the hand skeleton data from the parsed htr file
     let currentFrame = 1;     
-    let isPlaying = false;  
+    let isPlaying = true;
+    let framePos = 1;    
     let patternCounter = 0;
     const patternNames = ["Checks", "Stripes", "Dots"];
     let patternID = patternCounter%patternNames.length;
@@ -468,13 +472,11 @@ function wristPos(data) {
       }
 });
 
-    const shapeBtn = document.getElementById("shapeBtn");
-    shapeBtn.addEventListener("click", () => {
-      shapeCounter++;
-      shapeID = shapeCounter % shapeNames.length
-      shape = shapeNames[shapeID];
-      shapeBtn.textContent = shape;
-});
+const playBtn = document.getElementById("playBtn");
+  playBtn.addEventListener("click", () => {
+    isPlaying = !isPlaying;
+    playBtn.textContent = isPlaying ? "Stop" : "Play";
+  });
 
 const patternBtn = document.getElementById("patternBtn");
     patternBtn.addEventListener("click", () => {
@@ -482,6 +484,14 @@ const patternBtn = document.getElementById("patternBtn");
       patternID = patternCounter % patternNames.length
       pattern = patternNames[patternID];
       patternBtn.textContent = pattern;
+});
+
+const speedSlider = document.getElementById("speedSlider");
+const speedLabel = document.getElementById("speedLabel");
+let speed = parseFloat(speedSlider.value);
+speedSlider.addEventListener("input", () => {
+  speed = parseFloat(speedSlider.value);
+  speedLabel.textContent = speed.toFixed(1) + "x";
 });
 
     let startTime = Date.now();
