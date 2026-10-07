@@ -71,37 +71,33 @@ function createBoneLocalMatrix(tx, ty, tz, rx, ry, rz) {
  * @param {Array} matrixList - Accumulator array holding output matrices.
  * @returns {Array} List of calculated world matrices scaled for bone display.
  */
-function computeSkeletonMatrices(node, frameData, stack = createMatrixStack(), matrixList = []) {
+function computeSkeletonMatrices(node, frameData, basePositions, stack = createMatrixStack(), matrixList = []) {
     if (!node || !frameData) return matrixList;
 
-    // 1. Get current bone animation data
-    const bone = frameData[node.name] || { Tx: 0, Ty: 0, Tz: 0, Rx: 0, Ry: 0, Rz: 0, Length: 1.0 };
-    const boneLength = bone.Length || 1.0;
+    // 1. Frame offsets and base pose for this joint
+    const f = frameData[node.name] || { Tx: 0, Ty: 0, Tz: 0, Rx: 0, Ry: 0, Rz: 0, SF: 1 };
+    const b = (basePositions && basePositions[node.name]) ||
+              { Tx: 0, Ty: 0, Tz: 0, Rx: 0, Ry: 0, Rz: 0, Length: 0 };
+    const boneLength = b.Length * (f.SF || 1);
 
-    // 2. Save parent state before applying child transform
+    // 2. Save parent state
     stackPush(stack);
 
-    // 3. Create bone local transform matrix
-    const localMat = createBoneLocalMatrix(
-        bone.Tx, bone.Ty, bone.Tz,
-        bone.Rx, bone.Ry, bone.Rz
-    );
+    // 3. Local transform: T(base + frame) * R_base * R_frame
+    const baseMat  = createBoneLocalMatrix(b.Tx + f.Tx, b.Ty + f.Ty, b.Tz + f.Tz, b.Rx, b.Ry, b.Rz);
+    const frameRot = createBoneLocalMatrix(0, 0, 0, f.Rx, f.Ry, f.Rz);
+    stackMultiply(stack, multiplyMat4(baseMat, frameRot));
 
-    // 4. Apply local rotation & position to hierarchy stack
-    stackMultiply(stack, localMat);
-
-    // 5. Compute RENDER MATRIX for the bone mesh (Scaled along Y)
-    // We scale stackTop directly WITHOUT modifying stackTop for children
-    const renderMat = mat4Scale(stackGetTop(stack), [0.1, boneLength, 0.1]);
+    // 4. Render matrix: 8 mm thick, base Length * SF long
+    const renderMat = mat4Scale(stackGetTop(stack), [8, boneLength, 8]);
     matrixList.push({ name: node.name, matrix: renderMat });
 
-    // 6. Recurse down to child bones (children inherit joint orientation)
+    // 5. Children
     for (let i = 0; i < node.children.length; i++) {
-        computeSkeletonMatrices(node.children[i], frameData, stack, matrixList);
+        computeSkeletonMatrices(node.children[i], frameData, basePositions, stack, matrixList);
     }
 
-    // 7. Pop state back to parent level for siblings
+    // 6. Restore parent state
     stackPop(stack);
-
     return matrixList;
 }
