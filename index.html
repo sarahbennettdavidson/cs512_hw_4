@@ -583,14 +583,14 @@ const patternBtn = document.getElementById("patternBtn");
 
 
       //main shape
-      let mainBuffers;
-      if (shape === "Cube") mainBuffers = cubeBuffers;
-      else if (shape === "Pyramid") mainBuffers = pyramidBuffers;
-      else mainBuffers = sphereBuffers;
+      //let mainBuffers;
+      //if (shape === "Cube") mainBuffers = cubeBuffers;
+      //else if (shape === "Pyramid") mainBuffers = pyramidBuffers;
+      //else mainBuffers = sphereBuffers;
 
             // orbiters: one of each shape, circling the main shape
-      let orbitAngle = deltaTime / 1000;
-      let orbitBase = mat4RotateY(cubeRotation, orbitAngle);
+      //let orbitAngle = deltaTime / 1000;
+      //let orbitBase = mat4RotateY(cubeRotation, orbitAngle);
 
       //drawShape(cubeBuffers,    mat4Scale(mat4Translate(orbitBase, [cubeDir[0] * dist,    cubeDir[1] * dist,    cubeDir[2] * dist]),    [0.4, 0.4, 0.4]));
       //drawShape(pyramidBuffers, mat4Scale(mat4Translate(orbitBase, [pyramidDir[0] * dist, pyramidDir[1] * dist, pyramidDir[2] * dist]), [0.4, 0.4, 0.4]));
