@@ -222,31 +222,6 @@ function mat4Scale(matrix, scale) {
     return result;
 }
 
-//HTR file specific matrices local transformations
-function createBoneLocalMatrix(tx, ty, tz, rx, ry, rz) {
-    const degToRad = Math.PI / 180;
-
-    // Start with identity
-    let localMat = mat4Identity();
-
-    // Apply translation T
-    localMat = mat4Translate(localMat, [tx, ty, tz]);
-
-    // Apply Euler rotations Z -> Y -> X as used in HTR file
-    localMat = mat4RotateZ(localMat, rz * degToRad);
-    localMat = mat4RotateY(localMat, ry * degToRad);
-    localMat = mat4RotateX(localMat, rx * degToRad);
-
-    return localMat;
-}
-
-// Chains parent's world matrix with child's local transform
-function getChildWorldMatrix(parentWorldMat, tx, ty, tz, rx, ry, rz) {
-    const localMat = createBoneLocalMatrix(tx, ty, tz, rx, ry, rz);
-    
-    // Parent * Local
-    return multiplyMat4(parentWorldMat, localMat);
-}
 
 
 
