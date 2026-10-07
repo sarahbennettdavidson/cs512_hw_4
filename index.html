@@ -82,7 +82,7 @@ Press F12 to see the console for debugging.</p>
   <script id="vertex-shader" type="x-shader/x-vertex">#version 300 es
 in vec3 aPosition;
 in vec3 aColor;
-in vec2 aUV;      
+in vec2 aUV;     
 
 
 uniform float uTime; //time in sec
@@ -205,10 +205,9 @@ fragColor = vec4(fc, 1.0);
             currentFrame = 1;
             isPlaying = true;
         } else {
-        console.error("handData is null! File failed to fetch or parse.");
-    }
-    }
-    }
+            console.error("handData is null! File failed to fetch or parse.");
+        }
+    });
 
     // Function to draw all joints for the active frame of hand animation
     function animateHand(globalMatrix) {
@@ -249,7 +248,7 @@ fragColor = vec4(fc, 1.0);
     vertEditor.value = document.getElementById("vertex-shader").textContent;
     fragEditor.value = document.getElementById("fragment-shader").textContent;
 
-    let program, posLoc, colorLoc, timeLoc, uMVM, uPM, uMTM, uvLoc;
+    let program, posLoc, colorLoc, timeLoc, uMVM, uPM, uMTM, uvLoc, patternNum;
     let vbo, nbo, ibo, uvbo;
     let indexCount =  0;
     let shapeCounter = 0;
@@ -556,7 +555,7 @@ const patternBtn = document.getElementById("patternBtn");
       gl.uniformMatrix4fv(uMVM, false, modelViewMatrix);
 
       //making some variables for the shader color parameters
-      gl.uniform1i(gl.getUniformLocation(program, "patternNum"), patternID);
+      gl.uniform1i(patternNum, patternID);
       gl.uniform3fv(gl.getUniformLocation(program, "paletteParams"), paletteValues);
       gl.uniform1f(gl.getUniformLocation(program, "paletteT"), paletteT);
       gl.uniform1f(gl.getUniformLocation(program, "patternSize"), patternSize);
