@@ -46,14 +46,26 @@ function stackMultiply(stack, localMatrix) {
  */
 function createBoneLocalMatrix(tx, ty, tz, rx, ry, rz) {
     const degToRad = Math.PI / 180;
+    
+    // 1. Identity matrix
     let m = mat4Identity();
+    
+    // 2. Local translation FIRST
     m = mat4Translate(m, [tx, ty, tz]);
-    m = mat4RotateZ(m, rz * degToRad);
-    m = mat4RotateY(m, ry * degToRad);
-    m = mat4RotateX(m, rx * degToRad);
-    return m;
+    
+    // 3. Rotation chain for HTR standard (X -> Y -> Z or Z -> Y -> X depending on file header)
+    // Try standard X * Y * Z multiplication chain:
+    const rxMat = mat4RotateX(mat4Identity(), rx * degToRad);
+    const ryMat = mat4RotateY(mat4Identity(), ry * degToRad);
+    const rzMat = mat4RotateZ(mat4Identity(), rz * degToRad);
+    
+    // Combine rotations: R = Rx * Ry * Rz
+    let rotMat = mat4Multiply(rxMat, ryMat);
+    rotMat = mat4Multiply(rotMat, rzMat);
+    
+    // Apply rotation to translation
+    return mat4Multiply(m, rotMat);
 }
-
 /**
  * Performs Forward Kinematics via DFS stack traversal.
  * Calculates world transformation matrices for all bones in the active frame
