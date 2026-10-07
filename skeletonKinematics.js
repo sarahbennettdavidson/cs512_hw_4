@@ -68,31 +68,33 @@ function createBoneLocalMatrix(tx, ty, tz, rx, ry, rz) {
 function computeSkeletonMatrices(node, frameData, stack = createMatrixStack(), matrixList = []) {
     if (!node || !frameData) return matrixList;
 
-    // 1. Save parent transform state on stack
+    // 1. Push current parent matrix state
     stackPush(stack);
 
     const bone = frameData[node.name] || { Tx: 0, Ty: 0, Tz: 0, Rx: 0, Ry: 0, Rz: 0, Length: 1.0 };
+    const boneLength = bone.Length || 1.0;
 
-    // 2. Build local transform and accumulate down the hierarchy
+    // 2. Local transformation (Translation + Rotation)
     const localMat = createBoneLocalMatrix(
         bone.Tx, bone.Ty, bone.Tz,
         bone.Rx, bone.Ry, bone.Rz
     );
     stackMultiply(stack, localMat);
 
-    // 3. Apply bone length scaling along +Y for unitCubePos rendering
-    const boneLength = bone.Length || 1.0;
+    // 3. Compute render matrix for visually drawing this bone segment
     const renderMat = mat4Scale(stackGetTop(stack), [0.1, boneLength, 0.1]);
-
-    // Store world matrix for draw calls in main loop
     matrixList.push(renderMat);
 
-    // 4. Recurse down child bones (DFS)
+    // 4. Translate stack position to the TIP of this bone so child joints connect at the top
+    const tipOffset = mat4Translate(mat4Identity(), [0, boneLength, 0]);
+    stackMultiply(stack, tipOffset);
+
+    // 5. Recurse down to child joints
     for (let i = 0; i < node.children.length; i++) {
         computeSkeletonMatrices(node.children[i], frameData, stack, matrixList);
     }
 
-    // 5. Restore parent matrix state
+    // 6. Restore parent stack state
     stackPop(stack);
 
     return matrixList;
